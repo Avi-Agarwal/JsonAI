@@ -26,5 +26,5 @@ message Chat {
 message Message {
   string Role = 1;
   string Message = 2;
-  google.protobuf.Timestamp createdAt = 3;
+  string createdAt = 3;
 }

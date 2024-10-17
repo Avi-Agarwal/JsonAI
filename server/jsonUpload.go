@@ -6,13 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/sashabaranov/go-openai"
 	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const (
@@ -53,26 +56,38 @@ func (s Server) handleJsonUpload(w http.ResponseWriter, r *http.Request) {
 	log.Printf("File uploaded to tmp folder successfully: %s", filePath)
 
 	// Upload the file to S3 and remove from tmp folder
-	s3Location, err := s.UploadToS3(filePath, handler.Filename)
+	uniqueFileName := fmt.Sprintf("%s-%s", uuid.New().String(), handler.Filename)
+	s3Location, err := s.UploadToS3(filePath, uniqueFileName)
 	if err != nil {
 		log.Printf("Failed uploaded file to s3: %s", filePath)
 		logErrorAndRespond(w, "Failed to upload file", err, http.StatusInternalServerError)
 		return
 	}
 
-	jChat, err := db.StartChat(s.DB, userID, handler.Filename, s3Location)
+	InitialMessageToUser := fmt.Sprintf("Your JSON file %s uploaded successfully! How can I help you understand your file?", handler.Filename)
+	jChat, err := db.StartChat(s.DB, userID, handler.Filename, s3Location, InitialMessageToUser)
 	if err != nil {
 		log.Printf("Failed to start chat: %v", err)
 		logErrorAndRespond(w, "Failed to start chat", err, http.StatusInternalServerError)
 		return
 	}
 
+	err = db.InsertJSONCache(s.DB, jChat.UUID.ID, string(fileBytes))
+	if err != nil {
+		log.Printf("Failed to insert JSON cache: %v", err)
+		logErrorAndRespond(w, "Failed to insert JSON cache", err, http.StatusInternalServerError)
+		return
+	}
+
 	chatProto := &proto.Chat{
-		ID:           jChat.UUID.ID,
-		UserID:       jChat.UserID,
-		JsonName:     jChat.JSON,
-		MessageCount: 0,
-		Messages:     nil,
+		ID:       jChat.UUID.ID,
+		UserID:   jChat.UserID,
+		JsonName: jChat.JSON,
+		Messages: []*proto.Message{{
+			Role:      openai.ChatMessageRoleAssistant,
+			Message:   InitialMessageToUser,
+			CreatedAt: time.Now().Format(time.RFC3339),
+		}},
 	}
 
 	// Marshal the proto message to JSON and return it to the client

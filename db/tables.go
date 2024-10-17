@@ -10,6 +10,7 @@ var Tables = []interface{}{
 	&User{},
 	&JaiChat{},
 	&ChatMessages{},
+	&JSONCache{},
 }
 
 type UUID struct {
@@ -46,4 +47,13 @@ type ChatMessages struct {
 	Message   string `gorm:"not null"`
 	gorm.Model
 	JaiChat JaiChat `gorm:"foreignkey:JaiChatID"`
+}
+
+type JSONCache struct {
+	UUID
+	JaiChatID   string    `gorm:"not null"`
+	JSONContent string    `gorm:"type:text;not null"`
+	LastAccess  time.Time `gorm:"default:now()"`
+	gorm.Model
+	JaiChat JaiChat `gorm:"foreignkey:JaiChatID"` // Foreign key to JaiChat table
 }

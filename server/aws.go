@@ -56,7 +56,7 @@ func (s Server) UploadToS3(filePath, key string) (string, error) {
 	ext := filepath.Ext(filePath)
 	contentType := mime.TypeByExtension(ext)
 	if contentType == "" {
-		contentType = "application/json" // Default if type cannot be determined
+		contentType = "application/json"
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -91,82 +91,5 @@ func (s Server) UploadToS3(filePath, key string) (string, error) {
 	}
 
 	log.Printf("Successfully uploaded %q to S3, URL: %s", filePath, url)
-	return url, nil
-}
-
-func (s Server) UploadToS3Old(filePath, key string) (string, error) {
-	accessKeyID := s.AWS.AccessKey
-	secretAccessKey := s.AWS.SecretKey
-	awsRegion := s.AWS.Region
-	bucketName := s.AWS.BucketName
-
-	creds := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, ""))
-
-	// Load the AWS default configuration
-	cfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithRegion(awsRegion), // Specify your AWS Region
-		config.WithCredentialsProvider(creds),
-	)
-	if err != nil {
-		log.Printf("Error in config.LoadDefaultConfig: %s", err)
-		return "", err
-	}
-
-	// Create an S3 client
-	client := s3.NewFromConfig(cfg)
-
-	// Open the file
-	file, err := os.Open(filePath)
-	if err != nil {
-		log.Printf("Error in os.Open(): %s", err)
-		return "", fmt.Errorf("unable to open file %q, %v", filePath, err)
-	}
-	defer func(file *os.File) {
-		err = file.Close()
-		if err != nil {
-			log.Printf("Error in file.Close(): %s", err)
-		}
-	}(file)
-
-	// Get the file info
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return "", fmt.Errorf("unable to get file info for %q, %v", filePath, err)
-	}
-	fileSize := fileInfo.Size()
-
-	// Create the PutObject request
-	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
-		Bucket: aws.String(bucketName), // Replace with your bucket name
-		Key:    aws.String(key),
-		Body:   file,
-		Metadata: map[string]string{
-			"Content-Type": "image/png",
-		},
-		ContentLength: &fileSize,
-		ContentType:   aws.String("image/png"),
-	})
-
-	if err != nil {
-		return "", fmt.Errorf("unable to upload %q to %q, %v", filePath, "your-s3-bucket-name", err)
-	}
-
-	var url string
-	if awsRegion == "us-east-1" {
-		// The 'us-east-1' region does not require the region in the endpoint
-		url = fmt.Sprintf("https://%s.s3.amazonaws.com/%s", bucketName, key)
-	} else {
-		// For other regions, the region is part of the endpoint
-		url = fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucketName, awsRegion, key)
-	}
-
-	fmt.Println("URL of the generated image:", url)
-
-	// Remove the file after uploading
-	err = os.Remove(filePath)
-	if err != nil {
-		log.Printf("Error in os.Remove(): %s", err)
-	}
-
 	return url, nil
 }
