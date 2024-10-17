@@ -1,7 +1,10 @@
 package server
 
 import (
+	"JsonAI/db"
+	"JsonAI/proto"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
 	"io"
@@ -37,8 +40,8 @@ func (s Server) handleJsonUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateJSON(fileBytes); err != nil {
-		logErrorAndRespond(w, "Uploaded file is not a valid JSON", err, http.StatusBadRequest)
+	if err := validateJSONFile(handler.Filename); err != nil {
+		logErrorAndRespond(w, "Uploaded file is not a JSON", err, http.StatusBadRequest)
 		return
 	}
 
@@ -47,10 +50,37 @@ func (s Server) handleJsonUpload(w http.ResponseWriter, r *http.Request) {
 		logErrorAndRespond(w, "Failed to save the file", err, http.StatusInternalServerError)
 		return
 	}
+	log.Printf("File uploaded to tmp folder successfully: %s", filePath)
 
-	log.Printf("File uploaded successfully: %s", filePath)
+	// Upload the file to S3 and remove from tmp folder
+	s3Location, err := s.UploadToS3(filePath, handler.Filename)
+	if err != nil {
+		log.Printf("Failed uploaded file to s3: %s", filePath)
+		logErrorAndRespond(w, "Failed to upload file", err, http.StatusInternalServerError)
+		return
+	}
+
+	jChat, err := db.StartChat(s.DB, userID, handler.Filename, s3Location)
+	if err != nil {
+		log.Printf("Failed to start chat: %v", err)
+		logErrorAndRespond(w, "Failed to start chat", err, http.StatusInternalServerError)
+		return
+	}
+
+	chatProto := &proto.Chat{
+		ID:           jChat.UUID.ID,
+		UserID:       jChat.UserID,
+		JsonName:     jChat.JSON,
+		MessageCount: 0,
+		Messages:     nil,
+	}
+
+	// Marshal the proto message to JSON and return it to the client
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("File uploaded successfully"))
+	if err := json.NewEncoder(w).Encode(chatProto); err != nil {
+		logErrorAndRespond(w, "Failed to encode chat object", err, http.StatusInternalServerError)
+	}
 }
 
 func parseAndValidateFileUpload(r *http.Request) (multipart.File, *multipart.FileHeader, error) {
@@ -72,10 +102,17 @@ func parseAndValidateFileUpload(r *http.Request) (multipart.File, *multipart.Fil
 	return file, handler, nil
 }
 
-func validateJSON(data []byte) error {
+func validateJSONFormat(data []byte) error {
 	var jsonData interface{}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		return fmt.Errorf("invalid JSON file: %v", err)
+	}
+	return nil
+}
+
+func validateJSONFile(fileName string) error {
+	if filepath.Ext(fileName) != ".json" {
+		return errors.New("file is not a JSON file")
 	}
 	return nil
 }
