@@ -79,6 +79,7 @@ func (s Server) setupGRPC() error {
 	tcpAddress := fmt.Sprintf(":%s", s.GRPCPort)
 	lis, err := net.Listen("tcp", tcpAddress)
 	if err != nil {
+		log.Printf("Failed to listen on grpc port: %v", err)
 		return fmt.Errorf("failed to listen on grpc port: %v", err)
 	}
 
@@ -104,6 +105,7 @@ func (s Server) setupHTTP() error {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
+		log.Printf("Failed to dial gRPC server: %v", err)
 		return fmt.Errorf("failed to dial gRPC server: %v", err)
 	}
 
