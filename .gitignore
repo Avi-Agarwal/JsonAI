@@ -1,0 +1,39 @@
+# Ignore .env to keep secrets safe
+.env
+
+# Commonly ignored file patterns for a Go project
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.log
+
+# Dependency directories (remove the comment below if your project uses vendor directories)
+# vendor/
+
+# Ignore the binary output directory
+/bin/
+
+# Ignore the object files
+/obj/
+
+# Ignore archived files, like those produced by Go build
+*.o
+*.a
+
+# Ignore compiled files
+*.p
+*.h
+
+# Ignore saved coverage profiles
+*.cover
+
+# Ignore IDE and editor folders
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store

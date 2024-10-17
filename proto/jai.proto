@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/api/annotations.proto";
+import "objects.proto";
+
+option go_package = "github.com/avi/jsonai/proto";
+
+message SayHello {
+  message Request {
+    string name = 1;
+  }
+
+  message Response {
+    string message = 1;
+  }
+}
+
+message Login {
+  message Request {
+    string email = 1;
+    string pin = 2;
+  }
+
+  message Response {
+    User user = 1;
+  }
+}
+
+message ListChats {
+  message Request {
+    string userID = 1;
+  }
+
+  message Response {
+    repeated Chat chats = 1;
+  }
+}
+
+message UploadJson {
+  message Request {
+    string userID = 1;
+    string fileName = 2;
+    string jsonData = 3;
+  }
+
+  message Response {
+    Chat chat = 1;
+  }
+}
+
+service JsonAIService {
+  rpc SayHello (SayHello.Request) returns (SayHello.Response) {
+    option (google.api.http) = {
+      post: "/json-ai/sayhello"
+      body: "*"
+    };
+  }
+
+  rpc Login (Login.Request) returns (Login.Response) {
+    option (google.api.http) = {
+      post: "/json-ai/login"
+      body: "*"
+    };
+  }
+
+  rpc ListChats (ListChats.Request) returns (ListChats.Response) {
+    option (google.api.http) = {
+      get: "/json-ai/user/{userID}/chats"
+    };
+  }
+
+//  rpc UploadJson (UploadJson.Request) returns (UploadJson.Response) {
+//    option (google.api.http) = {
+//      post: "/json-ai/user/{userID}/upload-json"
+//      body: "*"
+//    };
+//  }
+}

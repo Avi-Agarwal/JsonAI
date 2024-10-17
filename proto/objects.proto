@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/avi/jsonai/proto";
+
+
+
+message User {
+  string ID = 1;
+  string name = 2;
+  string email = 3;
+  int32 chatCount = 4;
+}
+
+message Chat {
+  string ID = 1;
+  string userID = 2;
+  string jsonName = 3;
+  int32 messageCount = 4;
+  repeated Message messages = 5;
+}
+
+message Message {
+  string Role = 1;
+  string Message = 2;
+  google.protobuf.Timestamp createdAt = 3;
+}
