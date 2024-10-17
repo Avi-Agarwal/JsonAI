@@ -8,17 +8,16 @@ JsonAI is a server-side application that allows users to upload JSON files and i
 - **JSON Upload**: Users can upload JSON files to start a new chat.
 - **Interactive Q&A**: Users can ask questions about their uploaded JSON file, and the AI provides answers based on the content.
 - **Chat History**: Users can view and resume previous chats.
-- **Error Handling**: Robust system to manage invalid JSON uploads and unsupported queries.
 
 ## Application Workflow
 
 ### 1. User Login
 
-Users authenticate by providing a username and a password or PIN.
+Users authenticate by providing a username and pin.
 
 - **Endpoint**: `/json-ai/login`
 - **Response**:
-    - `user-id`: Unique identifier for the user.
+    - `user ID`: Unique identifier for the user.
     - `jwt token`: Token for session management and authorization.
     - `refresh token`: Token for renewing the session.
 
@@ -26,22 +25,23 @@ Users authenticate by providing a username and a password or PIN.
 
 Upon login, users can see their ongoing or past chats and choose to continue from where they left off.
 
-- **Endpoint**: `/json-ai/chats`
+- **Endpoint**: `/json-ai/user/{userID}/chats`
 - **Response**:
     - A list of chats associated with the user.
     - Each chat includes:
-        - `chat-id`: Identifier for the chat.
+        - `chat ID`: Identifier for the chat.
         - `title`: The name of the JSON file used to start the chat.
 
 ### 3. Start a New Chat
 
 Users can initiate a new chat by uploading a valid JSON file. The server saves the file and starts a new session.
 
-- **Endpoint**: `/json-ai/upload`
+- **Endpoint**: `/json-ai/user/{userID}/upload-json`
+- **Method**: `POST`: 
 - **Request**:
     - JSON file to be uploaded.
 - **Response**:
-    - `chat-id`: Identifier for the new chat session.
+    - `chat ID`: Identifier for the new chat session.
     - `title`: Name of the uploaded JSON file.
 - **Error Handling**:
     - Only valid JSON files are accepted.
@@ -51,13 +51,13 @@ Users can initiate a new chat by uploading a valid JSON file. The server saves t
 
 Users can ask questions about the uploaded JSON file. The conversation is stored and can be retrieved later.
 
-- **Endpoint**: `/json-ui/chat/{chatID}`
+- **Endpoint**: `/json-ai/chat/{chatID}`
 - **Methods**:
     - `GET`: Retrieve the current chat history between the user and JsonAI.
     - `PUT`: Send a new message to JsonAI and receive a response.
 - **Caching**:
-    - The server temporarily stores the JSON file associated with the chat in memory for quicker response times.
-    - If the JSON is not in memory, or if it's associated with a different chat, the server retrieves it from the bucket.
+    - The server temporarily stores the JSON file associated with the chat in the DB for quicker response times.
+    - If the JSON is not in the DB, or if it's associated with a different chat, the server retrieves it from S3.
 - **Error Handling**:
     - If a query cannot be answered based on the JSON file, the response will be:
         - `“I cannot answer the query using the information from the file.”`
@@ -68,7 +68,7 @@ Users can ask questions about the uploaded JSON file. The conversation is stored
 Users can select and resume a previous chat session from their chat history.
 
 - **Flow**:
-    - Use the chat ID from `/json-ai/chats` to continue interacting with the same JSON file.
+    - Use the chat ID from chats list call `/json-ai/chats` to continue interacting with a previous JSON file.
 
 ---
 
