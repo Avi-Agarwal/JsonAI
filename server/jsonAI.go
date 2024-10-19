@@ -174,20 +174,29 @@ Return '1' if you believe the question could be answered, inferred, attempted, o
 
 func (s Server) ValidateUserQuestionBasedOnJson(userQuestion, jsonContent string) (bool, error) {
 	validationMessages := []openai.ChatCompletionMessage{
-		{Role: openai.ChatMessageRoleSystem, Content: `You are an AI assistant that determines if a user's question can be answered using the given JSON`},
-		{Role: openai.ChatMessageRoleUser, Content: fmt.Sprintf(`Here is the JSON data:
+		{Role: openai.ChatMessageRoleSystem, Content: `You are an AI assistant tasked with determining whether a user's question can be answered, inferred, or at least attempted using a given JSON file. You will be provided the full JSON file. Your task is to determine if the question relates to the data, either directly or indirectly, by matching key terms in the question to fields in the JSON or making logical inferences. If a term from the question does not match exactly, but there is a closely related field, you should still consider it as relevant and infer a connection.`},
+		{Role: openai.ChatMessageRoleUser, Content: fmt.Sprintf(`
+Here is the JSON file:
 %s
 
 The user has asked the following question about the JSON:
 "%s"
 
-Please return '1' if the question is relevant and can be answered using the JSON data, or '0' if it cannot be answered. Make sure to only return a single char, '1' or '0'.
+Please determine whether this question could be answered, inferred, or at least attempted based on the JSON. Even if the exact terms don't match, make logical inferences when possible (e.g., consider synonyms or related fields).
+
+Err toward returning '1' unless the question is completely unrelated, and you cannot even make a reasonable attempt to answer it.
+
+Return '1' if you believe the question could be answered, inferred, attempted, or if you can even guess at the answer. Return '0' if you are certain the data is completely irrelevant to the question. If you return 0, please tell me the reason why.
 `, jsonContent, userQuestion)},
 	}
 
 	response, err := s.OpenAIChat(&validationMessages)
 	if err != nil {
 		return false, fmt.Errorf("failed to validate user question with OpenAI: %v", err)
+	}
+
+	if response != "1" {
+		log.Printf("User question validation response: %s", response)
 	}
 
 	return response == "1", nil

@@ -456,7 +456,7 @@ func (s Server) handleSmallJson(ctx context.Context, userQuestion string, jChat 
 	}
 
 	return &proto.AskJsonAI_Response{
-		Answer: invalidQuestionResponse,
+		Answer: answer,
 		Chat:   getChatResp.Chat,
 	}, nil
 }
