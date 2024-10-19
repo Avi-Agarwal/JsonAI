@@ -197,6 +197,21 @@ func (s Server) handleLargeJson(ctx context.Context, userQuestion string, jChat 
 		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 
+	uniqueFields, err := extractUniqueFieldsFromJSONColumns(duckDB, tableName)
+	if err != nil {
+		log.Printf("Error extracting JSON fields: %v", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+
+	totalSchema := "Table Schema:\n" + schema
+	if len(uniqueFields) > 0 {
+		totalSchema = totalSchema + "\n\nExpanded Fields from JSON Columns:\n" + uniqueFields
+	}
+
+	// Output the unique fields
+	fmt.Println("Unique Fields from JSON Columns:")
+	fmt.Println(uniqueFields)
+
 	// Insert user message
 	userMessage := &db.ChatMessages{
 		JaiChatID: jChat.UUID.ID,
@@ -213,7 +228,7 @@ func (s Server) handleLargeJson(ctx context.Context, userQuestion string, jChat 
 		return nil, status.Error(codes.Internal, "Internal server error")
 	}
 
-	isValidQuestion, err := s.ValidateUserQuestion(userQuestion, schema, jsonPreview, jChat.JSON)
+	isValidQuestion, err := s.ValidateUserQuestion(userQuestion, totalSchema, jsonPreview, jChat.JSON)
 	if err != nil {
 		log.Printf("Failed to validate user question: %s", err)
 		return nil, status.Error(codes.Internal, "Internal server error")
@@ -251,7 +266,7 @@ func (s Server) handleLargeJson(ctx context.Context, userQuestion string, jChat 
 		}, nil
 	}
 
-	results, sqlQuery, err := s.ConvertUserQuestionToSQLAndRetrieveQueryResults(duckDB, userQuestion, tableName, schema, jsonPreview)
+	results, sqlQuery, err := s.ConvertUserQuestionToSQLAndRetrieveQueryResults(duckDB, userQuestion, tableName, totalSchema, jsonPreview)
 	if err != nil {
 		log.Printf("Failed to convert user question to SQL: %s", err)
 		return nil, status.Error(codes.Internal, "Internal server error")
@@ -264,7 +279,7 @@ func (s Server) handleLargeJson(ctx context.Context, userQuestion string, jChat 
 		log.Printf("Skipping second query because the first result is already too large. Estimated tokens: %d", result1EstimatedTokens)
 	} else {
 		// Run the second query and append its result
-		results, sqlQuery, err = s.RetrieveRelevantInformation(duckDB, userQuestion, tableName, schema, jsonPreview)
+		results, sqlQuery, err = s.RetrieveRelevantInformation(duckDB, userQuestion, tableName, totalSchema, jsonPreview)
 		if err != nil {
 			log.Fatalf("Error running SQL query: %v", err)
 		}
