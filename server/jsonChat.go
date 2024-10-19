@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	_ "github.com/marcboeker/go-duckdb"
 	"github.com/sashabaranov/go-openai"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
