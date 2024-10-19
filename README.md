@@ -248,3 +248,13 @@ brew services start postgresql  # macOS
 ```bash
 go run main.go
 ```
+
+### 8. Demo:
+
+#### **Basic user flow**:
+
+
+
+https://github.com/user-attachments/assets/a704e4f2-fb98-41a2-8d26-2f99d33729c7
+
+
