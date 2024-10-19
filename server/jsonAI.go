@@ -156,7 +156,7 @@ Err toward returning '1' unless the question is completely unrelated, and you ca
 
 If you are leaning 0, ask yourself, given the schema and preview JSON, can you come up with a SQL that could explore this data to potentially answer the users question? Only if you cannot even come up with a SQL query to explore the data to answer the question, only then return 0.
 
-Return '1' if you believe the question could be answered, inferred, or attempted. Return '0' if you are certain the data is completely irrelevant to the question. If you return 0, please tell me the reason why.
+Return '1' if you believe the question could be answered, inferred, attempted, or if you can even guess at the answer. Return '0' if you are certain the data is completely irrelevant to the question. If you return 0, please tell me the reason why.
 `, jsonName, jsonPreview, schema, userQuestion)},
 	}
 
