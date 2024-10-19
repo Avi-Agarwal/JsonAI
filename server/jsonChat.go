@@ -274,28 +274,30 @@ func (s Server) handleLargeJson(ctx context.Context, userQuestion string, jChat 
 	}
 
 	resultsString := fmt.Sprintf("Query Run: %s\nQuery Results: %s\n", sqlQuery, results)
-	result1EstimatedTokens := estimateTokenCount(resultsString)
 
-	if result1EstimatedTokens >= maxResultTokenLimit {
-		log.Printf("Skipping second query because the first result is already too large. Estimated tokens: %d", result1EstimatedTokens)
-	} else {
-		// Run the second query and append its result
-		results, sqlQuery, err = s.RetrieveRelevantInformation(duckDB, userQuestion, tableName, totalSchema, jsonPreview)
-		if err != nil {
-			log.Fatalf("Error running SQL query: %v", err)
-		}
+	// Info: Uncomment the bottom lines to increase accuracy of the response but this will increase total time taken to respond and token usage.
 
-		// Include the query run information in the token count
-		result2String := fmt.Sprintf("\nQuery Run: %s\nQuery Results: %s\n", sqlQuery, results)
-		result2EstimatedTokens := estimateTokenCount(result2String)
-
-		// If the combined token usage is under the limit, append the second result
-		if result1EstimatedTokens+result2EstimatedTokens <= maxTokenLimit {
-			resultsString = resultsString + result2String
-		} else {
-			log.Printf("Skipping appending second result as it exceeds the token limit. Total tokens: %d", result1EstimatedTokens+result2EstimatedTokens)
-		}
-	}
+	//result1EstimatedTokens := estimateTokenCount(resultsString)
+	//if result1EstimatedTokens >= maxResultTokenLimit {
+	//	log.Printf("Skipping second query because the first result is already too large. Estimated tokens: %d", result1EstimatedTokens)
+	//} else {
+	//	// Run the second query and append its result
+	//	results, sqlQuery, err = s.RetrieveRelevantInformation(duckDB, userQuestion, tableName, totalSchema, jsonPreview)
+	//	if err != nil {
+	//		log.Fatalf("Error running SQL query: %v", err)
+	//	}
+	//
+	//	// Include the query run information in the token count
+	//	result2String := fmt.Sprintf("\nQuery Run: %s\nQuery Results: %s\n", sqlQuery, results)
+	//	result2EstimatedTokens := estimateTokenCount(result2String)
+	//
+	//	// If the combined token usage is under the limit, append the second result
+	//	if result1EstimatedTokens+result2EstimatedTokens <= maxTokenLimit {
+	//		resultsString = resultsString + result2String
+	//	} else {
+	//		log.Printf("Skipping appending second result as it exceeds the token limit. Total tokens: %d", result1EstimatedTokens+result2EstimatedTokens)
+	//	}
+	//}
 
 	finalAnswer, err := s.AnswerUserQuestionBasedOnSQlResults(resultsString, userQuestion)
 	if err != nil {
