@@ -14,6 +14,9 @@
 # Dependency directories (remove the comment below if your project uses vendor directories)
 # vendor/
 
+# Ignore the temporary directory
+/tmp/
+
 # Ignore the binary output directory
 /bin/
 

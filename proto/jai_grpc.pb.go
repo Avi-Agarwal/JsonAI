@@ -22,6 +22,8 @@ const (
 	JsonAIService_SayHello_FullMethodName  = "/proto.JsonAIService/SayHello"
 	JsonAIService_Login_FullMethodName     = "/proto.JsonAIService/Login"
 	JsonAIService_ListChats_FullMethodName = "/proto.JsonAIService/ListChats"
+	JsonAIService_GetChat_FullMethodName   = "/proto.JsonAIService/GetChat"
+	JsonAIService_AskJsonAI_FullMethodName = "/proto.JsonAIService/AskJsonAI"
 )
 
 // JsonAIServiceClient is the client API for JsonAIService service.
@@ -31,6 +33,8 @@ type JsonAIServiceClient interface {
 	SayHello(ctx context.Context, in *SayHello_Request, opts ...grpc.CallOption) (*SayHello_Response, error)
 	Login(ctx context.Context, in *Login_Request, opts ...grpc.CallOption) (*Login_Response, error)
 	ListChats(ctx context.Context, in *ListChats_Request, opts ...grpc.CallOption) (*ListChats_Response, error)
+	GetChat(ctx context.Context, in *GetChat_Request, opts ...grpc.CallOption) (*GetChat_Response, error)
+	AskJsonAI(ctx context.Context, in *AskJsonAI_Request, opts ...grpc.CallOption) (*AskJsonAI_Response, error)
 }
 
 type jsonAIServiceClient struct {
@@ -71,6 +75,26 @@ func (c *jsonAIServiceClient) ListChats(ctx context.Context, in *ListChats_Reque
 	return out, nil
 }
 
+func (c *jsonAIServiceClient) GetChat(ctx context.Context, in *GetChat_Request, opts ...grpc.CallOption) (*GetChat_Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetChat_Response)
+	err := c.cc.Invoke(ctx, JsonAIService_GetChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jsonAIServiceClient) AskJsonAI(ctx context.Context, in *AskJsonAI_Request, opts ...grpc.CallOption) (*AskJsonAI_Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AskJsonAI_Response)
+	err := c.cc.Invoke(ctx, JsonAIService_AskJsonAI_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // JsonAIServiceServer is the server API for JsonAIService service.
 // All implementations must embed UnimplementedJsonAIServiceServer
 // for forward compatibility.
@@ -78,6 +102,8 @@ type JsonAIServiceServer interface {
 	SayHello(context.Context, *SayHello_Request) (*SayHello_Response, error)
 	Login(context.Context, *Login_Request) (*Login_Response, error)
 	ListChats(context.Context, *ListChats_Request) (*ListChats_Response, error)
+	GetChat(context.Context, *GetChat_Request) (*GetChat_Response, error)
+	AskJsonAI(context.Context, *AskJsonAI_Request) (*AskJsonAI_Response, error)
 	mustEmbedUnimplementedJsonAIServiceServer()
 }
 
@@ -96,6 +122,12 @@ func (UnimplementedJsonAIServiceServer) Login(context.Context, *Login_Request) (
 }
 func (UnimplementedJsonAIServiceServer) ListChats(context.Context, *ListChats_Request) (*ListChats_Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListChats not implemented")
+}
+func (UnimplementedJsonAIServiceServer) GetChat(context.Context, *GetChat_Request) (*GetChat_Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChat not implemented")
+}
+func (UnimplementedJsonAIServiceServer) AskJsonAI(context.Context, *AskJsonAI_Request) (*AskJsonAI_Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AskJsonAI not implemented")
 }
 func (UnimplementedJsonAIServiceServer) mustEmbedUnimplementedJsonAIServiceServer() {}
 func (UnimplementedJsonAIServiceServer) testEmbeddedByValue()                       {}
@@ -172,6 +204,42 @@ func _JsonAIService_ListChats_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _JsonAIService_GetChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChat_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JsonAIServiceServer).GetChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: JsonAIService_GetChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JsonAIServiceServer).GetChat(ctx, req.(*GetChat_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JsonAIService_AskJsonAI_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AskJsonAI_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JsonAIServiceServer).AskJsonAI(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: JsonAIService_AskJsonAI_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JsonAIServiceServer).AskJsonAI(ctx, req.(*AskJsonAI_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // JsonAIService_ServiceDesc is the grpc.ServiceDesc for JsonAIService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +258,14 @@ var JsonAIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListChats",
 			Handler:    _JsonAIService_ListChats_Handler,
+		},
+		{
+			MethodName: "GetChat",
+			Handler:    _JsonAIService_GetChat_Handler,
+		},
+		{
+			MethodName: "AskJsonAI",
+			Handler:    _JsonAIService_AskJsonAI_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
