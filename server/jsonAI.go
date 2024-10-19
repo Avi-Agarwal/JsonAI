@@ -139,7 +139,7 @@ Now, using this information, please answer the user's original question in a kin
 
 func (s Server) ValidateUserQuestion(userQuestion, schema, jsonPreview, jsonName string) (bool, error) {
 	validationMessages := []openai.ChatCompletionMessage{
-		{Role: openai.ChatMessageRoleSystem, Content: `You are an AI assistant tasked with determining whether a user's question can be answered, inferred, or at least attempted using a given JSON file. You will be provided a schema and a preview of the data. Your task is to determine if the question relates to the data, either directly or indirectly, by matching key terms in the question to fields in the JSON or making logical inferences. If a term from the question does not match exactly, but there is a closely related field (e.g., "log_level" instead of "error_code"), you should still consider it as relevant and infer a connection.`},
+		{Role: openai.ChatMessageRoleSystem, Content: `You are an AI assistant tasked with determining whether a user's question can be answered, inferred, or at least attempted using a given JSON file. You will be provided a schema and a preview of the data. Your task is to determine if the question relates to the data, either directly or indirectly, by matching key terms in the question to fields in the JSON or making logical inferences. If a term from the question does not match exactly, but there is a closely related field, you should still consider it as relevant and infer a connection.`},
 		{Role: openai.ChatMessageRoleUser, Content: fmt.Sprintf(`
 The JSON file is called "%s". Below is a preview of the JSON data:
 %s
@@ -150,9 +150,13 @@ Here is the schema of the DuckDB table the JSON has been loaded into:
 The user has asked the following question about the JSON:
 "%s"
 
-Please determine whether this question could be answered, inferred, or at least attempted based on the JSON. Even if the exact terms don't match, make logical inferences when possible (e.g., "log_level" might imply error information if "error codes" are missing). The relevant data could be nested within fields like 'metadata', be sure to consider those details as well. Please err toward returning '1' unless the question is completely unrelated.
+Please determine whether this question could be answered, inferred, or at least attempted based on the JSON. Even if the exact terms don't match, make logical inferences when possible (e.g., consider synonyms or related fields). The relevant data could be nested within fields like 'metadata', be sure to consider those details as well. 
 
-Return '1' if you believe the question could be answered, inferred, or attempted. Return '0' if you are certain the data is completely irrelevant to the question. If you return 0, please tell me the reason why.
+Err toward returning '1' unless the question is completely unrelated, and you cannot even make a reasonable attempt to answer it.
+
+If you are leaning 0, ask yourself, given the schema and preview JSON, can you come up with a SQL that could explore this data to potentially answer the users question? Only if you cannot even come up with a SQL query to explore the data to answer the question, only then return 0.
+
+Return '1' if you believe the question could be answered, inferred, attempted, or if you can even guess at the answer. Return '0' if you are certain the data is completely irrelevant to the question. If you return 0, please tell me the reason why.
 `, jsonName, jsonPreview, schema, userQuestion)},
 	}
 
