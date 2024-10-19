@@ -34,9 +34,10 @@ type User struct {
 
 type JaiChat struct {
 	UUID
-	UserID       string `gorm:"not null"`
-	JSON         string `gorm:"not null"`
-	FileLocation string `gorm:"not null"`
+	UserID            string `gorm:"not null"`
+	JSON              string `gorm:"not null"`
+	FileLocation      string `gorm:"not null"`
+	FileTokenEstimate int    `gorm:"not null"`
 	gorm.Model
 	User User `gorm:"foreignkey:UserID"`
 }

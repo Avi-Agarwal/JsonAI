@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/sashabaranov/go-openai"
+	"gorm.io/gorm"
 	"io"
 	"log"
 	"mime/multipart"
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	MaxFileSize = 10 // 10 MB
+	MaxFileSize = 100 // 100 MB
 )
 
 func (s Server) handleJsonUpload(w http.ResponseWriter, r *http.Request) {
@@ -27,6 +28,15 @@ func (s Server) handleJsonUpload(w http.ResponseWriter, r *http.Request) {
 	if userID == "" {
 		http.Error(w, "userID is required", http.StatusBadRequest)
 		return
+	}
+
+	_, err := db.GetUserByID(s.DB, userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "User not found", http.StatusBadRequest)
+		} else {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
 	}
 
 	// Parse and validate the file upload
@@ -43,8 +53,8 @@ func (s Server) handleJsonUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateJSONFile(handler.Filename); err != nil {
-		logErrorAndRespond(w, "Uploaded file is not a JSON", err, http.StatusBadRequest)
+	if err := validateJSONFormat(fileBytes); err != nil {
+		logErrorAndRespond(w, "Uploaded file is not a valid JSON", err, http.StatusBadRequest)
 		return
 	}
 
@@ -63,24 +73,27 @@ func (s Server) handleJsonUpload(w http.ResponseWriter, r *http.Request) {
 		logErrorAndRespond(w, "Failed to upload file", err, http.StatusInternalServerError)
 		return
 	}
+	tokenEstimate := estimateTokenCount(string(fileBytes))
 
 	InitialMessageToUser := fmt.Sprintf("Your JSON file %s uploaded successfully! How can I help you understand your file?", handler.Filename)
-	jChat, err := db.StartChat(s.DB, userID, handler.Filename, s3Location, InitialMessageToUser)
+	jChat, err := db.StartChat(s.DB, userID, handler.Filename, s3Location, InitialMessageToUser, tokenEstimate)
 	if err != nil {
 		log.Printf("Failed to start chat: %v", err)
 		logErrorAndRespond(w, "Failed to start chat", err, http.StatusInternalServerError)
 		return
 	}
 
-	err = db.InsertJSONCache(s.DB, jChat.UUID.ID, string(fileBytes))
-	if err != nil {
-		log.Printf("Failed to insert JSON cache: %v", err)
-		logErrorAndRespond(w, "Failed to insert JSON cache", err, http.StatusInternalServerError)
-		return
+	if tokenEstimate < 2000 {
+		err = db.InsertJSONCache(s.DB, jChat.UUID.ID, string(fileBytes))
+		if err != nil {
+			log.Printf("Failed to insert JSON cache: %v", err)
+			logErrorAndRespond(w, "Failed to insert JSON cache", err, http.StatusInternalServerError)
+			return
+		}
 	}
 
 	chatProto := &proto.Chat{
-		ID:       jChat.UUID.ID,
+		ChatID:   jChat.UUID.ID,
 		UserID:   jChat.UserID,
 		JsonName: jChat.JSON,
 		Messages: []*proto.Message{{

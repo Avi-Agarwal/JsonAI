@@ -32,3 +32,9 @@ func UpdateLastAccess(db *gorm.DB, chatID string) error {
 		Where("jai_chat_id = ?", chatID).
 		Update("last_access", time.Now()).Error
 }
+
+func GetJsonFromCache(db *gorm.DB, chatID string) (*JSONCache, error) {
+	cache := &JSONCache{}
+	err := db.Where("jai_chat_id = ?", chatID).First(cache).Error
+	return cache, err
+}

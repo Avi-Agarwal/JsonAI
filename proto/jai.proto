@@ -50,6 +50,30 @@ message UploadJson {
   }
 }
 
+message GetChat {
+  message Request {
+    string userID = 1;
+    string chatID = 2;
+  }
+
+  message Response {
+    Chat chat = 1;
+  }
+}
+
+message AskJsonAI {
+  message Request {
+    string userID = 1;
+    string chatID = 2;
+    string question = 3;
+  }
+
+  message Response {
+    string answer = 1;
+    Chat chat = 2; // Full chat history
+  }
+}
+
 service JsonAIService {
   rpc SayHello (SayHello.Request) returns (SayHello.Response) {
     option (google.api.http) = {
@@ -71,10 +95,17 @@ service JsonAIService {
     };
   }
 
-//  rpc UploadJson (UploadJson.Request) returns (UploadJson.Response) {
-//    option (google.api.http) = {
-//      post: "/json-ai/user/{userID}/upload-json"
-//      body: "*"
-//    };
-//  }
+  rpc GetChat (GetChat.Request) returns (GetChat.Response) {
+    option (google.api.http) = {
+      get: "/json-ai/user/{userID}/chat/{chatID}"
+    };
+  }
+
+  rpc AskJsonAI (AskJsonAI.Request) returns (AskJsonAI.Response) {
+    option (google.api.http) = {
+      put: "/json-ai/user/{userID}/chat/{chatID}"
+      body: "*"
+    };
+  }
+
 }

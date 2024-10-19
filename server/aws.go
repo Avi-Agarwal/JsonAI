@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"mime"
 	"os"
@@ -92,4 +93,40 @@ func (s Server) UploadToS3(filePath, key string) (string, error) {
 
 	log.Printf("Successfully uploaded %q to S3, URL: %s", filePath, url)
 	return url, nil
+}
+
+func (s Server) DownloadFileFromS3(bucket, key string) (string, error) {
+	accessKeyID := s.AWS.AccessKey
+	secretAccessKey := s.AWS.SecretKey
+	awsRegion := s.AWS.Region
+
+	creds := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, ""))
+
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion(awsRegion),
+		config.WithCredentialsProvider(creds),
+	)
+	if err != nil {
+		log.Printf("Error loading AWS config: %v", err)
+		return "", err
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return "", fmt.Errorf("unable to get object from S3: %v", err)
+	}
+	defer result.Body.Close()
+
+	// Read the file content
+	body, err := ioutil.ReadAll(result.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file content: %v", err)
+	}
+
+	return string(body), nil
 }
