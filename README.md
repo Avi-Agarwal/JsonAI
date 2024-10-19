@@ -254,7 +254,8 @@ go run main.go
 #### **Basic user flow**:
 
 
-https://github.com/user-attachments/assets/e4783722-b721-46c2-8df6-b13c7e813102
+
+https://github.com/user-attachments/assets/00cb2882-9808-461d-af1f-b2de411bd2f2
 
 
 
