@@ -3,6 +3,13 @@
 
 JsonAI is a server-side application that allows users to upload JSON files and interact with an AI to ask questions about the content of the uploaded file. The AI processes the JSON data and answers user queries based on the information available in the file.
 
+## Demo
+
+#### **Basic user flow**:
+
+https://github.com/user-attachments/assets/a704e4f2-fb98-41a2-8d26-2f99d33729c7
+
+
 ## Features
 
 - **User Authentication**: Simple login system with email and PIN.
@@ -248,13 +255,3 @@ brew services start postgresql  # macOS
 ```bash
 go run main.go
 ```
-
-### 8. Demo:
-
-#### **Basic user flow**:
-
-
-
-https://github.com/user-attachments/assets/a704e4f2-fb98-41a2-8d26-2f99d33729c7
-
-
