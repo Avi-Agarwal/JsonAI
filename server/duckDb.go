@@ -9,10 +9,6 @@ import (
 	"strings"
 )
 
-type MetadataInfo struct {
-	FlattenedFields []string `json:"flattened_fields"`
-}
-
 func createTableFromJSON(db *sql.DB, jsonData interface{}) error {
 	switch data := jsonData.(type) {
 	case []interface{}:
@@ -36,7 +32,6 @@ func createTableFromJSON(db *sql.DB, jsonData interface{}) error {
 func createTableForMap(db *sql.DB, jsonMap map[string]interface{}) error {
 	createStmt := "CREATE TABLE IF NOT EXISTS json_data ("
 	for key, value := range jsonMap {
-		// Determine the data type of each field
 		fieldType := determineFieldType(value)
 		createStmt += fmt.Sprintf("%s %s,", key, fieldType)
 	}
@@ -69,7 +64,6 @@ func determineFieldType(value interface{}) string {
 }
 
 func insertMapIntoDuckDB(db *sql.DB, jsonMap map[string]interface{}) error {
-	// Build SQL INSERT INTO statement dynamically
 	columns := ""
 	values := ""
 	args := []interface{}{}
@@ -77,7 +71,6 @@ func insertMapIntoDuckDB(db *sql.DB, jsonMap map[string]interface{}) error {
 		columns += key + ","
 		values += "?,"
 
-		// Ensure the value is not nil before checking its type
 		if value == nil {
 			// Handle nil values (e.g., store as NULL or empty string)
 			args = append(args, nil)
@@ -102,7 +95,6 @@ func insertMapIntoDuckDB(db *sql.DB, jsonMap map[string]interface{}) error {
 	values = strings.TrimRight(values, ",")
 	insertStmt := fmt.Sprintf("INSERT INTO json_data (%s) VALUES (%s);", columns, values)
 
-	// Execute the query
 	_, err := db.Exec(insertStmt, args...)
 	if err != nil {
 		return fmt.Errorf("failed to insert data: %v", err)
@@ -177,7 +169,12 @@ func getTableSchema(db *sql.DB, tableName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get table schema: %v", err)
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Printf("Error closing rows: %v", err)
+		}
+	}(rows)
 
 	columns, err := rows.Columns()
 	if err != nil {
@@ -208,4 +205,113 @@ func getTableSchema(db *sql.DB, tableName string) (string, error) {
 
 	schemaText = strings.TrimRight(schemaText, ", ")
 	return schemaText, nil
+}
+
+func flattenJSONFields(jsonData map[string]interface{}, prefix string, column string, uniqueFields map[string]map[string]struct{}) {
+	for key, value := range jsonData {
+		newKey := key
+		if prefix != "" {
+			newKey = prefix + "." + key
+		}
+
+		switch v := value.(type) {
+		case map[string]interface{}:
+			// Recursively flatten nested maps
+			flattenJSONFields(v, newKey, column, uniqueFields)
+		default:
+			// Add the flattened key to the unique fields map, grouped by column
+			if _, ok := uniqueFields[column]; !ok {
+				uniqueFields[column] = make(map[string]struct{})
+			}
+			uniqueFields[column][newKey] = struct{}{} // Ensure the key is unique
+		}
+	}
+}
+
+// Function to check if a string contains valid JSON
+func isValidJSON(str string) bool {
+	var js map[string]interface{}
+	err := json.Unmarshal([]byte(str), &js)
+	return err == nil
+}
+
+// Function to dynamically detect JSON columns and extract unique nested fields
+func extractUniqueFieldsFromJSONColumns(db *sql.DB, tableName string) (string, error) {
+	uniqueFields := make(map[string]map[string]struct{})
+	query := fmt.Sprintf("PRAGMA table_info(%s);", tableName)
+
+	// Query the table schema to identify columns
+	rows, err := db.Query(query)
+	if err != nil {
+		return "", fmt.Errorf("failed to query table schema: %v", err)
+	}
+	defer rows.Close()
+
+	columns := make([]string, 0)
+	for rows.Next() {
+		var cid int
+		var name, colType, notnull, pk string
+		var dfltValue sql.NullString // Handling potential NULL for dflt_value
+
+		// Adjust the scan to use sql.NullString for nullable fields
+		err := rows.Scan(&cid, &name, &colType, &notnull, &dfltValue, &pk)
+		if err != nil {
+			log.Printf("Failed to scan table schema: %v", err)
+			continue
+		}
+
+		// Add VARCHAR or TEXT columns that could contain JSON to the list
+		if colType == "VARCHAR" || colType == "TEXT" {
+			columns = append(columns, name)
+		}
+	}
+
+	// Iterate over JSON-like columns to extract and flatten fields
+	for _, col := range columns {
+		query := fmt.Sprintf("SELECT %s FROM %s;", col, tableName)
+		rows, err := db.Query(query)
+		if err != nil {
+			log.Printf("Failed to query column %s: %v", col, err)
+			continue
+		}
+		defer rows.Close()
+
+		// Process each row in the column
+		for rows.Next() {
+			var jsonStr string
+			err := rows.Scan(&jsonStr)
+			if err != nil {
+				log.Printf("Failed to scan row for column %s: %v", col, err)
+				continue
+			}
+
+			// Check if the string is valid JSON
+			if !isValidJSON(jsonStr) {
+				continue
+			}
+
+			// Attempt to parse the JSON string
+			var jsonData map[string]interface{}
+			err = json.Unmarshal([]byte(jsonStr), &jsonData)
+			if err != nil {
+				// If it's not valid JSON, skip this row
+				log.Printf("Invalid JSON in column %s: %v", col, err)
+				continue
+			}
+
+			// Flatten the JSON and track unique fields
+			flattenJSONFields(jsonData, "", col, uniqueFields)
+		}
+	}
+
+	// Build a structured string of unique fields by column
+	var result strings.Builder
+	for col, fields := range uniqueFields {
+		result.WriteString(fmt.Sprintf("Column: %s\n", col))
+		for field := range fields {
+			result.WriteString(fmt.Sprintf("  - %s\n", field))
+		}
+	}
+
+	return result.String(), nil
 }
