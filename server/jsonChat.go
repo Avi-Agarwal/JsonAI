@@ -209,9 +209,9 @@ func (s Server) handleLargeJson(ctx context.Context, userQuestion string, jChat 
 		totalSchema = totalSchema + "\n\nExpanded Fields from JSON Columns:\n" + uniqueFields
 	}
 
-	// Output the unique fields
-	fmt.Println("Unique Fields from JSON Columns:")
-	fmt.Println(uniqueFields)
+	// Output the schema
+	fmt.Println("Total schema:")
+	fmt.Println(totalSchema)
 
 	// Insert user message
 	userMessage := &db.ChatMessages{
